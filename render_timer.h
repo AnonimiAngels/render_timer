@@ -3,8 +3,7 @@ Author: Vladyslav Gutsulyak
 Class: render_timer
 
 Description:
-The RenderTimer class provides a mechanism for controlling the rendering interval in a software application.
-It allows you to define a desired render interval in milliseconds and provides a convenient way to check whether it's time to render a frame.
+The RenderTimer class provides a mechanism for controlling the rendering interval in a software application. It allows you to define a desired render interval in milliseconds and provides a convenient way to check whether it's time to render a frame.
 
 Features:
 - Start and stop methods: Allows you to start and stop the timer.
@@ -16,9 +15,7 @@ Features:
 - High Performance: Optimized implementation using C++20 features to minimize calculations and improve performance.
 
 Use Case:
-The RenderTimer class is particularly useful in applications where precise rendering timing is crucial, such as graphics-intensive applications,
-game engines, or real-time simulations. It provides a simple and efficient way to control the rendering rate and maintain smooth and consistent animation
-or visual updates.
+The RenderTimer class is particularly useful in applications where precise rendering timing is crucial, such as graphics-intensive applications, game engines, or real-time simulations. It provides a simple and efficient way to control the rendering rate and maintain smooth and consistent animation or visual updates.
 */
 
 #pragma once
@@ -35,6 +32,11 @@ class render_timer
 	render_timer()
 		: m_fps(60), m_render_interval(1000 / m_fps), m_running(false), m_start_time(std::chrono::high_resolution_clock::now())
 	{
+	}
+
+	~render_timer()
+	{
+		stop();
 	}
 
 	inline void start()
@@ -101,7 +103,7 @@ class render_timer
 
 			if (extra_duration > std::chrono::milliseconds(0))
 			{
-				m_render_interval -= extra_duration.count();
+				sleep_duration -= extra_duration;
 			}
 
 			last_frame_end = frame_end;
