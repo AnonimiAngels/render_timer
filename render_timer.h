@@ -1,3 +1,24 @@
+/*
+Author: Vladyslav Gutsulyak
+Class: render_timer
+
+Description:
+The RenderTimer class provides a mechanism for controlling the rendering interval in a software application. It allows you to define a desired render interval in milliseconds and provides a convenient way to check whether it's time to render a frame.
+
+Features:
+- Start and stop methods: Allows you to start and stop the timer.
+- SetRenderInterval method: Sets the desired render interval in milliseconds.
+- GetRenderInterval method: Retrieves the current render interval.
+- CanRender method: Checks whether it's time to render a frame based on the set render interval.
+- Precise Timing: The timer uses the steady clock from the C++ standard library to ensure accurate and precise timing.
+- Multithreading Support: The timer can be used in a separate thread for more precise timing and minimal impact on the main application thread.
+- High Performance: Optimized implementation using C++20 features to minimize calculations and improve performance.
+
+Use Case:
+The RenderTimer class is particularly useful in applications where precise rendering timing is crucial, such as graphics-intensive applications, game engines, or real-time simulations. It provides a simple and efficient way to control the rendering rate and maintain smooth and consistent animation or visual updates.
+*/
+
+
 #pragma once
 #ifndef __RENDER_TIMER_H__
 #define __RENDER_TIMER_H__
@@ -6,13 +27,17 @@
 #include <thread>
 #include <atomic>
 
-class render_timer {
+class render_timer 
+{
 public:
-    render_timer() : m_fps(60), m_render_interval(1000 / m_fps), m_running(false), m_start_time(std::chrono::high_resolution_clock::now()) {}
+    render_timer()
+        : m_fps(60), m_render_interval(1000 / m_fps), m_running(false), m_start_time(std::chrono::high_resolution_clock::now()) 
+        {}
 
     void start()
     {
-        if (!m_running.exchange(true)) {
+        if (!m_running.exchange(true)) 
+        {
             m_start_time = std::chrono::high_resolution_clock::now();
             m_thread = std::thread(&render_timer::timer_loop, this);
         }
@@ -20,7 +45,8 @@ public:
 
     void stop()
     {
-        if (m_running.exchange(false)) {
+        if (m_running.exchange(false)) 
+        {
             m_cv.notify_all();
             m_thread.join();
         }
@@ -28,7 +54,8 @@ public:
 
     void set_fps(int fps)
     {
-        if (fps > 0 && fps != m_fps) {
+        if (fps > 0 && fps != m_fps) 
+        {
             m_fps = fps;
             m_render_interval = 1000 / m_fps;
         }
@@ -50,7 +77,8 @@ public:
 private:
     void timer_loop()
     {
-        while (m_running.load()) {
+        while (m_running.load()) 
+        {
             auto frame_start = std::chrono::high_resolution_clock::now();
             std::this_thread::sleep_for(std::chrono::milliseconds(m_render_interval));
 
