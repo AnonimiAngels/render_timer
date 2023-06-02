@@ -3,7 +3,8 @@ Author: Vladyslav Gutsulyak
 Class: render_timer
 
 Description:
-The RenderTimer class provides a mechanism for controlling the rendering interval in a software application. It allows you to define a desired render interval in milliseconds and provides a convenient way to check whether it's time to render a frame.
+The RenderTimer class provides a mechanism for controlling the rendering interval in a software application.
+It allows you to define a desired render interval in milliseconds and provides a convenient way to check whether it's time to render a frame.
 
 Features:
 - Start and stop methods: Allows you to start and stop the timer.
@@ -15,97 +16,111 @@ Features:
 - High Performance: Optimized implementation using C++20 features to minimize calculations and improve performance.
 
 Use Case:
-The RenderTimer class is particularly useful in applications where precise rendering timing is crucial, such as graphics-intensive applications, game engines, or real-time simulations. It provides a simple and efficient way to control the rendering rate and maintain smooth and consistent animation or visual updates.
+The RenderTimer class is particularly useful in applications where precise rendering timing is crucial, such as graphics-intensive applications,
+game engines, or real-time simulations. It provides a simple and efficient way to control the rendering rate and maintain smooth and consistent animation
+or visual updates.
 */
-
 
 #pragma once
 #ifndef __RENDER_TIMER_H__
 #define __RENDER_TIMER_H__
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <thread>
-#include <atomic>
 
-class render_timer 
+class render_timer
 {
-public:
-    render_timer()
-        : m_fps(60), m_render_interval(1000 / m_fps), m_running(false), m_start_time(std::chrono::high_resolution_clock::now()) 
-        {}
+  public:
+	render_timer()
+		: m_fps(60), m_render_interval(1000 / m_fps), m_running(false), m_start_time(std::chrono::high_resolution_clock::now())
+	{
+	}
 
-    void start()
-    {
-        if (!m_running.exchange(true)) 
-        {
-            m_start_time = std::chrono::high_resolution_clock::now();
-            m_thread = std::thread(&render_timer::timer_loop, this);
-        }
-    }
+	inline void start()
+	{
+		if (!m_running.exchange(true))
+		{
+			m_start_time = std::chrono::high_resolution_clock::now();
+			m_thread = std::thread(&render_timer::timer_loop, this);
+		}
+	}
 
-    void stop()
-    {
-        if (m_running.exchange(false)) 
-        {
-            m_cv.notify_all();
-            m_thread.join();
-        }
-    }
+	inline void stop()
+	{
+		if (m_running.exchange(false))
+		{
+			m_cv.notify_all();
+			m_thread.join();
+		}
+	}
 
-    void set_fps(int fps)
-    {
-        if (fps > 0 && fps != m_fps) 
-        {
-            m_fps = fps;
-            m_render_interval = 1000 / m_fps;
-        }
-    }
+	inline void set_fps(int fps)
+	{
+		if (fps > 0 && fps != m_fps)
+		{
+			m_fps = fps;
+			m_render_interval = 1000 / m_fps;
+		}
+	}
 
-    bool can_render()
-    {
-        std::unique_lock<std::mutex> lock(m_mutex);
-        m_cv.wait(lock, [this] { return m_render_ready.test_and_set(); });
-        m_render_ready.clear();
-        return true;
-    }
+	inline bool can_render()
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		m_cv.wait(lock, [this]
+				  { return m_render_ready.test_and_set(); });
+		m_render_ready.clear();
+		return true;
+	}
 
-    int get_render_interval() const
-    {
-        return m_render_interval;
-    }
+	inline int get_render_interval() const
+	{
+		return m_render_interval;
+	}
 
-private:
-    void timer_loop()
-    {
-        while (m_running.load()) 
-        {
-            auto frame_start = std::chrono::high_resolution_clock::now();
-            std::this_thread::sleep_for(std::chrono::milliseconds(m_render_interval));
+  private:
+	void timer_loop()
+	{
+		std::chrono::high_resolution_clock::time_point last_frame_end = m_start_time;
 
-            {
-                std::lock_guard<std::mutex> lock(m_mutex);
-                m_render_ready.test_and_set();
-            }
-            m_cv.notify_all();
+		while (m_running.load())
+		{
+			auto frame_start = std::chrono::high_resolution_clock::now();
 
-            auto frame_end = std::chrono::high_resolution_clock::now();
-            auto frame_duration = std::chrono::duration_cast<std::chrono::milliseconds>(frame_end - frame_start);
-            auto sleep_duration = std::chrono::milliseconds(m_render_interval) - frame_duration;
+			{
+				std::lock_guard<std::mutex> lock(m_mutex);
+				m_render_ready.test_and_set();
+			}
+			m_cv.notify_all();
 
-            if (sleep_duration > std::chrono::milliseconds(0)) {
-                std::this_thread::sleep_for(sleep_duration);
-            }
-        }
-    }
+			auto frame_end = std::chrono::high_resolution_clock::now();
+			auto frame_duration = std::chrono::duration_cast<std::chrono::milliseconds>(frame_end - frame_start);
 
-    int m_fps;
-    int m_render_interval;
-    std::atomic<bool> m_running;
-    std::chrono::high_resolution_clock::time_point m_start_time;
-    std::mutex m_mutex;
-    std::condition_variable m_cv;
-    std::atomic_flag m_render_ready = ATOMIC_FLAG_INIT;
-    std::thread m_thread;
+			auto sleep_duration = std::chrono::milliseconds(m_render_interval) - frame_duration;
+			auto extra_duration = frame_duration - std::chrono::milliseconds(m_render_interval);
+
+			if (extra_duration > std::chrono::milliseconds(0))
+			{
+				m_render_interval -= extra_duration.count();
+			}
+
+			last_frame_end = frame_end;
+
+			if (sleep_duration > std::chrono::duration<int64_t>(0))
+			{
+				std::this_thread::sleep_for(sleep_duration);
+			}
+		}
+	}
+
+	int m_fps;
+	int m_render_interval;
+	std::atomic<bool> m_running;
+	std::chrono::high_resolution_clock::time_point m_start_time;
+	std::mutex m_mutex;
+	std::condition_variable m_cv;
+	std::atomic_flag m_render_ready = ATOMIC_FLAG_INIT;
+	std::thread m_thread;
 };
 
 #endif // __RENDER_TIMER_H__
